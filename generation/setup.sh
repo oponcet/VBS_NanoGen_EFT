@@ -9,6 +9,8 @@ if [[ -z "${SINGULARITY_CONTAINER:-}" && -z "${APPTAINER_CONTAINER:-}" ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 #if [ ! -d genproductions ]; then
 #  git clone https://github.com/cms-sw/genproductions.git --depth 1
 #fi
@@ -36,8 +38,8 @@ if [ ! -d CMSSW_13_0_14 ]; then
   #rm -rf EFTGenReader/GenReader/
   #rm -rf EFTGenReader/LHEReader/
 
-  mkdir -p Configuration/GenProduction/python/
-  cp -r ../../fragments/*.py Configuration/GenProduction/python/
+  mkdir -p "${CMSSW_BASE}/src/Configuration/GenProduction/python/"
+  cp -r "${SCRIPT_DIR}/fragments/"*.py "${CMSSW_BASE}/src/Configuration/GenProduction/python/"
 
   scram b -j 4
   popd
