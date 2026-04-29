@@ -100,7 +100,7 @@ def main():
     save_histograms_to_root(all_hists, root_output)
     print(f"Saved histograms to '{root_output}'")
 
-    plot_histograms(all_hists, png_output)
+    # plot_histograms(all_hists, png_output)
 
 
 if __name__ == "__main__":

@@ -12,9 +12,11 @@ from histogram_utils import (
     plot_ratio_histograms,
 )
 
-DEFAULT_INPUT_EFT = "/eos/cms/store/group/phys_smp/VJets_NLO_VBSanalyses/Samples/NanoAOD/SMEFT/wpzjj_dim6_ewk/2018/wpzjjdim6_ewk_99.root"
-DEFAULT_INPUT_EWK = "/eos/cms/store/group/phys_smp/VJets_NLO_VBSanalyses/Samples/NanoAOD/WplusTo2JZTo2LJJ_EWK_LO_SM_MJJ100PTJ10_TuneCP5_13TeV-madgraph-pythia8/VVjj_2018v6/200810_095240/0000/nano_9.root"
+# DEFAULT_INPUT_EFT = "/eos/cms/store/group/phys_smp/VJets_NLO_VBSanalyses/Samples/NanoAOD/SMEFT/wpzjj_dim6_ewk/2018/wpzjjdim6_ewk_99.root"
+# DEFAULT_INPUT_EWK = "/eos/cms/store/group/phys_smp/VJets_NLO_VBSanalyses/Samples/NanoAOD/WplusTo2JZTo2LJJ_EWK_LO_SM_MJJ100PTJ10_TuneCP5_13TeV-madgraph-pythia8/VVjj_2018v6/200810_095240/0000/nano_9.root"
 
+DEFAULT_INPUT_EFT = "/uscms_data/d3/oponcet1/VBS/VBS_NanoGen_EFT/generation/nanogen_123.root"
+DEFAULT_INPUT_EWK = "/uscms_data/d3/oponcet1/VBS/VBS_NanoGen_EFT/generation/wpzjjdim6_ewk_99.root"
 
 def parse_args():
     """Parse command-line arguments."""

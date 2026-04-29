@@ -156,13 +156,25 @@ def build_log10_weight_histograms(weights, multiplicities, weight_name, valid_mu
         hist_name = f"{weight_name}_{index}"
         axis_name = f"log10_{weight_name.lower()}_{index}"
 
-        # Auto-scale range based on data
+        # # Auto-scale range based on data
+        # log_min = float(np.min(log_values))
+        # log_max = float(np.max(log_values))
+        # # Add 10% padding
+        # log_range = log_max - log_min
+        # log_min -= 0.1 * log_range
+        # log_max += 0.1 * log_range
+
         log_min = float(np.min(log_values))
         log_max = float(np.max(log_values))
-        # Add 10% padding
+
         log_range = log_max - log_min
-        log_min -= 0.1 * log_range
-        log_max += 0.1 * log_range
+
+        if log_range == 0:
+            log_min -= 0.5
+            log_max += 0.5
+        else:
+            log_min -= 0.1 * log_range
+            log_max += 0.1 * log_range
 
         histograms[hist_name] = hist.Hist(
             hist.axis.Regular(100, log_min, log_max, name=axis_name, label=f"log10({weight_name}[{index}])")
@@ -377,3 +389,58 @@ def plot_ratio_histograms(hist_numerator, hist_denominator, output_path, title="
 
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close(fig)
+
+def plot_histograms(histograms, output_prefix):
+    """
+    Plot all histograms and save them as individual PNG files.
+
+    Args:
+        histograms: Dictionary of histograms
+        output_prefix: Base path for output files (without extension)
+    """
+    if not histograms:
+        print("No histograms to plot")
+        return
+
+    for name, h in histograms.items():
+        fig, ax = plt.subplots(figsize=(8, 6))
+
+        # Extract histogram data
+        values = h.values()
+        variances = h.variances()
+
+        if variances is None:
+            variances = values
+
+        errors = np.sqrt(variances)
+
+        # Axis info
+        axis = h.axes[0]
+        edges = axis.edges
+        centers = (edges[:-1] + edges[1:]) / 2
+
+        ax.step(edges, np.append(values, values[-1]), where="post", label=name, linewidth=2)
+
+        ax.errorbar(
+            centers,
+            values,
+            yerr=errors,
+            fmt='none',       
+            capsize=2,
+            linewidth=1.5
+        )
+
+        # Labels
+        ax.set_xlabel(axis.label if axis.label else axis.name)
+        ax.set_ylabel("Entries")
+        ax.set_title(name)
+
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+
+        # Save per histogram
+        output_file = f"{output_prefix}_{name}.png"
+        plt.savefig(output_file, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+        print(f"Saved plot: {output_file}")
