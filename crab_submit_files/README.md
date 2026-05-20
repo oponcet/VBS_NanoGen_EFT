@@ -9,7 +9,15 @@ This repository now includes:
 
 ### 1) Setup your CMSSW environment
 
-Use the same patched setup described in the main README (`generation/setup.sh`) so NanoGEN keeps the EFT/LHE weights as expected.
+Use the same patched setup described in the main README. From repo root:
+
+```bash
+cd generation
+cmssw-el8
+. setup.sh
+```
+
+This prepares the patched CMSSW area needed to keep EFT/LHE weights as expected.
 
 ### 2) Update site/user specific settings in the CRAB submit file
 
