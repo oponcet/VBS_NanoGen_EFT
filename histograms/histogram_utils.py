@@ -37,8 +37,8 @@ def build_weight_histograms(weights, multiplicities, weight_name, valid_multipli
         return {}
 
     max_multiplicity = int(ak.max(selected_multiplicities))
-    print(f"{weight_name}: selected events = {selected_events}")
-    print(f"{weight_name}: multiplicity max = {max_multiplicity}")
+    # print(f"{weight_name}: selected events = {selected_events}")
+    # print(f"{weight_name}: multiplicity max = {max_multiplicity}")
 
     histograms = {}
     for index in range(max_multiplicity):
@@ -137,13 +137,24 @@ def build_log10_weight_histograms(weights, multiplicities, weight_name, valid_mu
         return {}
 
     max_multiplicity = int(ak.max(selected_multiplicities))
-    print(f"{weight_name}: selected events = {selected_events}")
-    print(f"{weight_name}: multiplicity max = {max_multiplicity}")
+    # print(f"{weight_name}: selected events = {selected_events}")
+    # print(f"{weight_name}: multiplicity max = {max_multiplicity}")
 
     histograms = {}
     for index in range(max_multiplicity):
         index_mask = selected_multiplicities > index
         values = ak.to_numpy(selected_weights[index_mask, index])
+
+
+        # # ---------------- DEBUG AVANT LOG ----------------
+        # print(f"\n--- {weight_name}[{index}] ---")
+        # print("first 10 raw values:", values[:10])
+        # print("min:", np.min(values))
+        # print("max:", np.max(values))
+        # print("mean:", np.mean(values))
+
+        # # -------------------------------------------------
+
         # Filter out zero and negative weights before taking log10
         valid_mask = values > 0
         values = values[valid_mask]
@@ -176,6 +187,7 @@ def build_log10_weight_histograms(weights, multiplicities, weight_name, valid_mu
             log_min -= 0.1 * log_range
             log_max += 0.1 * log_range
 
+
         histograms[hist_name] = hist.Hist(
             hist.axis.Regular(100, log_min, log_max, name=axis_name, label=f"log10({weight_name}[{index}])")
         )
@@ -200,6 +212,7 @@ def make_lhe_reweighting_weight_histograms(events):
 
     if "nLHEReweightingWeight" in events.fields:
         multiplicities = events.nLHEReweightingWeight
+        print(type(events.LHEReweightingWeight))
     else:
         multiplicities = ak.num(events.LHEReweightingWeight, axis=1)
 
@@ -266,7 +279,115 @@ def get_z_boson_pt(events):
     z_pt = ak.fill_none(ak.firsts(z_bosons.pt), 0)
 
     return z_pt
+    
+def get_leading_jet_pt(events):
+    """
+    Leading jet pT from GenJet.
+    """
 
+    if "GenJet" not in events.fields:
+        print("GenJet branch not found")
+        return ak.Array([])
+
+    jets = events.GenJet
+
+    leading = ak.firsts(jets)
+
+    pt = ak.fill_none(leading.pt, 0.0)
+
+    return pt
+
+def get_mVV(events):
+    """
+    Get invariant mass of V1+V2 system (VV) from GenPart.
+
+    V bosons are PDG ID 23 (Z) or 24/-24 (W)
+    """
+
+    if "GenPart" not in events.fields:
+        print("GenPart branch not found")
+        return ak.Array([])
+
+    gen = events.GenPart
+
+    v_mask = (
+        (abs(gen.pdgId) == 23) |
+        (abs(gen.pdgId) == 24)
+    )
+
+    v = gen[v_mask]
+
+    # take first two bosons per event
+    v1 = ak.firsts(v)
+    v2 = ak.pad_none(v, 2)[:, 1]
+
+    # require valid pairs
+    valid = ~ak.is_none(v1) & ~ak.is_none(v2)
+
+    mVV = ak.where(
+        valid,
+        (v1 + v2).mass,
+        0.0
+    )
+
+    return ak.fill_none(mVV, 0.0)
+
+def get_mjj(events):
+
+    if "GenJet" not in events.fields:
+        return ak.Array([])
+
+    jets = events.GenJet
+
+    j1 = ak.firsts(jets)
+    j2 = ak.pad_none(jets, 2)[:, 1]
+
+    valid = (~ak.is_none(j1)) & (~ak.is_none(j2))
+
+    mjj = ak.where(
+        valid,
+        (j1 + j2).mass,
+        0.0
+    )
+
+    return ak.fill_none(mjj, 0.0)
+
+def get_deta_jj(events):
+
+    if "GenJet" not in events.fields:
+        return ak.Array([])
+
+    jets = events.GenJet
+
+    j1 = ak.firsts(jets)
+    j2 = ak.pad_none(jets, 2)[:, 1]
+
+    valid = (~ak.is_none(j1)) & (~ak.is_none(j2))
+
+    deta = ak.where(
+        valid,
+        abs(j1.eta - j2.eta),
+        0.0
+    )
+
+    return ak.fill_none(deta, 0.0)
+
+def get_costheta_star(events):
+
+    if "GenPart" not in events.fields:
+        return ak.Array([])
+
+    bosons = events.GenPart[
+        (abs(events.GenPart.pdgId) == 23) |
+        (abs(events.GenPart.pdgId) == 24)
+    ]
+
+    v = ak.firsts(bosons)
+
+    # proxy: use boost direction approximation
+    costh = ak.fill_none(v.pz / v.pt, 0.0)
+
+    return costh
 
 def get_z_boson_mass(events):
     """
@@ -296,7 +417,7 @@ def get_z_boson_mass(events):
     return z_mass
 
 
-def plot_ratio_histograms(hist_numerator, hist_denominator, output_path, title="Observable"):
+def plot_ratio_histograms(hist_numerator, hist_denominator, output_path, title="Observable", hist_numerator_title='EFT (reweighted SM)' ):
     """
     Plot histograms normalized to 1, with ratio panel below.
 
@@ -354,11 +475,11 @@ def plot_ratio_histograms(hist_numerator, hist_denominator, output_path, title="
 
     # Top panel: normalized histograms
     ax1.step(bin_edges[:min_bins+1], np.concatenate([[num_vals[0]], num_vals]),
-             where='mid', label='EFT (reweighted SM)', color='blue', linewidth=2)
+             where='mid', label=hist_numerator_title, color='dodgerblue', linewidth=2)
     ax1.step(bin_edges[:min_bins+1], np.concatenate([[denom_vals[0]], denom_vals]),
-             where='mid', label='EWK', color='orange', linewidth=2, alpha=0.7)
-    ax1.errorbar(centers, num_vals, yerr=num_err, fmt='none', ecolor='blue', alpha=0.5, capsize=3)
-    ax1.errorbar(centers, denom_vals, yerr=denom_err, fmt='none', ecolor='orange', alpha=0.5, capsize=3)
+             where='mid', label='EWK SM', color='purple', linewidth=2, alpha=0.7)
+    ax1.errorbar(centers, num_vals, yerr=num_err, fmt='none', ecolor='dodgerblue', alpha=0.5, capsize=3)
+    ax1.errorbar(centers, denom_vals, yerr=denom_err, fmt='none', ecolor='purple', alpha=0.5, capsize=3)
 
     ax1.set_ylabel('Events (normalized to 1.0)')
     ax1.set_title(f'{title} - Normalized to 1.0')
@@ -377,8 +498,8 @@ def plot_ratio_histograms(hist_numerator, hist_denominator, output_path, title="
         )
 
     ax2.errorbar(centers, ratio_vals, yerr=ratio_err, fmt='o', markersize=6,
-                 ecolor='blue', color='blue', capsize=4, alpha=0.7)
-    ax2.axhline(y=1.0, color='red', linestyle='--', linewidth=2, alpha=0.7)
+                 ecolor='dodgerblue', color='dodgerblue', capsize=4, alpha=0.7)
+    ax2.axhline(y=1.0, color='black', linestyle='--', linewidth=2, alpha=0.7)
     ax2.set_ylabel('Ratio')
     ax2.set_xlabel(title)
     ax2.grid(True, alpha=0.3, axis='y')
@@ -390,7 +511,7 @@ def plot_ratio_histograms(hist_numerator, hist_denominator, output_path, title="
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close(fig)
 
-def plot_histograms(histograms, output_prefix):
+def plot_each_histograms(histograms, output_prefix):
     """
     Plot all histograms and save them as individual PNG files.
 
@@ -444,3 +565,62 @@ def plot_histograms(histograms, output_prefix):
         plt.close(fig)
 
         print(f"Saved plot: {output_file}")
+
+def plot_histograms(histograms, output_prefix, lhereweighting=False):
+    if not histograms:
+        print("No histograms to plot")
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    for name, h in histograms.items():
+        values = h.values()
+        variances = h.variances()
+
+        if variances is None:
+            variances = values
+
+        errors = np.sqrt(variances)
+        
+
+        axis = h.axes[0]
+        edges = axis.edges
+        centers = (edges[:-1] + edges[1:]) / 2
+
+
+        # Step histogram
+        ax.step(
+            edges,
+            np.append(values, values[-1]),
+            where="post",
+            linewidth=2,
+            label=name
+        )
+
+        # Error bars
+        ax.errorbar(
+            centers,
+            values,
+            yerr=errors,
+            fmt='none',
+            capsize=2,
+            linewidth=1.5
+        )
+
+    ax.set_xlabel(axis.label if axis.label else axis.name)
+    ax.set_ylabel("Entries")
+    ax.set_title("All histograms")
+
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+
+    # --- SPECIAL MODE FOR LHE REWEIGHTING ---
+    if lhereweighting:
+        ax.set_xlim(-1, 0.5)
+        ax.set_yscale("log")
+
+    output_file = f"{output_prefix}_all.png"
+    plt.savefig(output_file, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+    print(f"Saved plot: {output_file}")
