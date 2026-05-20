@@ -17,7 +17,7 @@ config.Data.splitting = 'EventBased'
 config.Data.unitsPerJob = 100
 NJOBS = 5000
 config.Data.totalUnits = config.Data.unitsPerJob * NJOBS
-config.Data.outLFNDirBase = '/store/user/mpresill/'
+config.Data.outLFNDirBase = '/store/user/YOUR_USERNAME/'
 config.Data.publication = False
 config.Data.outputDatasetTag = 'Run3Summer23_NanoGEN_v1'
 

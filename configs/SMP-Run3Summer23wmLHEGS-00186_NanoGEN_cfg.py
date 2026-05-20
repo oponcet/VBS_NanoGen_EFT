@@ -166,7 +166,6 @@ process = customizeNanoGEN(process)
 from Configuration.DataProcessing.Utils import addMonitoring
 process = addMonitoring(process)
 
-process.RandomNumberGeneratorService.externalLHEProducer.initialSeed = 123
 process.genWeightsTable.maxGroupsPerType = cms.vint32(-1, -1, -1, -1, -1)
 
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
